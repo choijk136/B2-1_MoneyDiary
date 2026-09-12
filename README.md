@@ -124,13 +124,9 @@ python -m budget_app --data-dir ./demo_imported list --limit 10
 
 첫 명령의 내보내기 건수와 두 번째 명령의 `imported` 건수가 일치하고, 마지막 목록에 CSV로 옮긴 거래가 표시됩니다.
 
-### 9. 자동 테스트
+### 9. 초기화
 
-```bash
-python -m unittest discover -v
-```
-
-모든 테스트가 `OK`로 끝나면 전체 시연이 완료됩니다. 처음 상태로 되돌리려면 `python -m scripts.prepare_demo`를 다시 실행하면 됩니다.
+처음 상태로 되돌리려면 `python -m scripts.prepare_demo`를 다시 실행하면 됩니다.
 
 ## 실행
 
@@ -247,20 +243,3 @@ budget_app/
 - 공개 함수와 데이터 모델에 타입 힌트를 적용해 CLI·서비스·저장소 사이의 입출력 계약을 명확히 했습니다.
 - 각 명령의 `--help`를 지원하며 옵션 이름은 `--limit`, `--from`처럼 이중 하이픈으로 통일했습니다.
 
-## 테스트
-
-표준 라이브러리 `unittest`만 사용합니다.
-
-```bash
-python -m unittest discover -v
-```
-
-모델 검증, 세 저장 파일 초기화, 역방향 스트리밍 순서, 출력의 점진적 소비, 원자적 수정/삭제, 검색 조합, 요약·예산, 사용 중 카테고리 보호, CSV 입출력, 대화형 CLI와 오류 종료 코드를 검사합니다.
-
-10만 건 성능 측정은 다음 명령으로 재현할 수 있습니다.
-
-```bash
-python -m scripts.benchmark_100k --records 100000
-```
-
-실측 결과와 O(n) 검색, ID 인덱스 부재, 전체 파일 재작성 병목 및 인덱싱·청크화·멀티프로세싱 개선안은 [성능 분석 문서](docs/DESIGN_AND_PERFORMANCE.md)를 참고하세요.
