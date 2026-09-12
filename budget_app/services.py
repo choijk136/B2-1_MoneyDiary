@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import uuid
+from calendar import monthrange
 from collections import defaultdict
 from dataclasses import replace
 from itertools import islice
@@ -237,8 +238,10 @@ class BudgetService:
             raise BudgetAppError("--month와 기간 조건은 함께 사용할 수 없습니다.", "조건 종류 하나만 선택하세요.")
         if month:
             month = validate_month(month)
+            year, month_number = (int(part) for part in month.split("-"))
+            last_day = monthrange(year, month_number)[1]
             date_from = f"{month}-01"
-            date_to = f"{month}-31"
+            date_to = f"{month}-{last_day:02d}"
 
         destination.parent.mkdir(parents=True, exist_ok=True)
         count = 0
@@ -258,4 +261,3 @@ class BudgetService:
                 )
                 count += 1
         return count
-

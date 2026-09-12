@@ -93,7 +93,12 @@ class ServiceTests(unittest.TestCase):
         with self.assertRaises(BudgetAppError):
             self.service.export_csv(destination)
 
+    def test_export_month_uses_the_real_last_day(self) -> None:
+        self.add(date="2024-02-29")
+        destination = self.root / "february.csv"
+        count = self.service.export_csv(destination, month="2024-02")
+        self.assertEqual(count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
-

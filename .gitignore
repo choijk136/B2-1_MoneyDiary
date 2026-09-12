@@ -4,3 +4,7 @@ __pycache__/
 data/app.log
 export*.csv
 
+# 평가 시연 중 자동 생성되는 파일
+demo_data/
+demo_imported/
+demo_export.csv

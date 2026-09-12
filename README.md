@@ -4,6 +4,134 @@ Python 3.10 이상과 표준 라이브러리만 사용하는 JSONL 기반 콘솔
 
 > 저장 포맷 비교·선정 근거와 100,000건 실측 프로파일링 결과는 [`docs/DESIGN_AND_PERFORMANCE.md`](docs/DESIGN_AND_PERFORMANCE.md)에 정리했습니다.
 
+## 평가 시연: 위에서부터 한 줄씩 실행
+
+모든 명령은 **저장소 루트**에서 실행합니다. 시연 데이터는 기본 데이터(`./data`)와 분리된 `./demo_data`에 저장되므로 기존 자료에 영향을 주지 않습니다.
+
+### 1. 예시 데이터 준비
+
+아래 명령은 고정 ID를 가진 거래 6건, 기본 카테고리, 2026년 9월 예산을 생성합니다. 여러 번 실행해도 데이터가 중복되지 않으므로 시연 직전에 항상 먼저 실행합니다.
+
+```bash
+python -m scripts.prepare_demo
+```
+
+예상 결과:
+
+```text
+[시연 준비 완료]
+- 예시 거래: 6건
+- 월 예산: 2026-09 / 800,000원
+- 데이터 폴더: demo_data
+```
+
+### 2. 도움말과 최신순 목록
+
+```bash
+python -m budget_app --help
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data list --limit 6
+```
+
+`TX-DEMO-006`부터 `TX-DEMO-001`까지 최신 등록순으로 출력됩니다. 저장소가 파일 끝에서부터 거래를 한 건씩 `yield`하는 스트리밍 동작입니다.
+
+### 3. 복합 조건 검색
+
+```bash
+python -m budget_app --data-dir ./demo_data search --from 2026-09-01 --to 2026-09-30 --category food --type expense --q 점심 --tag school
+```
+
+모든 조건을 만족하는 `TX-DEMO-003 | 학교 점심` 한 건이 출력됩니다.
+
+### 4. 월별 요약과 예산 초과 경고
+
+```bash
+python -m budget_app --data-dir ./demo_data budget get --month 2026-09
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data summary --month 2026-09 --top 3
+```
+
+총수입 3,000,000원, 총지출 810,000원, 잔액 2,190,000원과 카테고리별 지출 TOP 3가 출력됩니다. 설정 예산 800,000원보다 10,000원 초과했으므로 경고도 표시됩니다.
+
+### 5. 카테고리 추가·조회·삭제
+
+```bash
+python -m budget_app --data-dir ./demo_data category add --name books
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data category list
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data category remove --name books
+```
+
+사용하지 않는 `books` 카테고리가 추가되고 목록에 표시된 뒤 정상 삭제됩니다.
+
+### 6. 대화형 거래 추가
+
+```bash
+python -m budget_app --data-dir ./demo_data add
+```
+
+프롬프트가 나타나면 다음 값을 한 줄씩 입력합니다.
+
+```text
+2026-09-12
+expense
+food
+5500
+커피
+drink,cafe
+```
+
+`[저장 완료] id=TX-...`가 출력됩니다. ID는 중복을 방지하기 위해 자동 생성됩니다.
+
+### 7. 고정 ID 거래 수정과 삭제
+
+```bash
+python -m budget_app --data-dir ./demo_data update --id TX-DEMO-005 --amount 75000 --memo "영화 할인 적용"
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data delete --id TX-DEMO-006
+```
+
+```bash
+python -m budget_app --data-dir ./demo_data list --limit 10
+```
+
+목록에서 `TX-DEMO-005`의 금액과 메모가 바뀌고 `TX-DEMO-006`이 사라진 것을 확인합니다. 두 작업은 임시 파일을 `fsync`한 뒤 `os.replace`로 원자적으로 반영합니다.
+
+### 8. CSV 내보내기와 가져오기
+
+```bash
+python -m budget_app --data-dir ./demo_data export --out ./demo_export.csv --month 2026-09
+```
+
+```bash
+python -m budget_app --data-dir ./demo_imported import --from ./demo_export.csv
+```
+
+```bash
+python -m budget_app --data-dir ./demo_imported list --limit 10
+```
+
+첫 명령의 내보내기 건수와 두 번째 명령의 `imported` 건수가 일치하고, 마지막 목록에 CSV로 옮긴 거래가 표시됩니다.
+
+### 9. 자동 테스트
+
+```bash
+python -m unittest discover -v
+```
+
+모든 테스트가 `OK`로 끝나면 전체 시연이 완료됩니다. 처음 상태로 되돌리려면 `python -m scripts.prepare_demo`를 다시 실행하면 됩니다.
+
 ## 실행
 
 저장소 루트에서 실행합니다. 외부 패키지 설치는 필요하지 않습니다.
