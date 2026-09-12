@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .decorators import safe_command
 from .errors import BudgetAppError
-from .formatters import format_transactions
+from .formatters import iter_transaction_lines
 from .models import normalize_category, validate_amount, validate_date, validate_type
 from .repositories import Storage
 from .services import BudgetService
@@ -80,7 +80,8 @@ def command_add(args: argparse.Namespace) -> int:
 
 @safe_command
 def command_list(args: argparse.Namespace) -> int:
-    print(format_transactions(_service(args).list_transactions(args.limit)))
+    for line in iter_transaction_lines(_service(args).list_transactions(args.limit)):
+        print(line)
     return 0
 
 
@@ -94,7 +95,8 @@ def command_search(args: argparse.Namespace) -> int:
         query=args.query,
         tag=args.tag,
     )
-    print(format_transactions(results))
+    for line in iter_transaction_lines(results):
+        print(line)
     return 0
 
 
@@ -291,4 +293,3 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\n[오류] 사용자 요청으로 작업을 취소했습니다.", file=sys.stderr)
         return 130
-

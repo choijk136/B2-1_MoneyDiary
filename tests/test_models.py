@@ -21,6 +21,10 @@ class ModelTests(unittest.TestCase):
         with self.assertRaises(BudgetAppError):
             validate_date("2024-13-40")
 
+    def test_date_requires_zero_padded_iso_format(self) -> None:
+        with self.assertRaises(BudgetAppError):
+            validate_date("2024-1-1")
+
     def test_invalid_month_is_rejected(self) -> None:
         with self.assertRaises(BudgetAppError):
             validate_month("2024-00")
@@ -39,4 +43,3 @@ class ModelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import date
+import re
 from typing import Any, Mapping
 
 from .errors import BudgetAppError
@@ -14,23 +15,27 @@ TRANSACTION_TYPES = {"income", "expense"}
 def validate_date(value: str) -> str:
     """YYYY-MM-DD 형식의 실제 날짜인지 확인한다."""
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%d")
+        parsed = date.fromisoformat(value)
+        if parsed.isoformat() != value:
+            raise ValueError("zero-padded ISO date required")
     except ValueError as exc:
         raise BudgetAppError(
             "날짜 형식이 올바르지 않습니다.", "YYYY-MM-DD 형식의 실제 날짜를 입력하세요. 예: 2024-01-15"
         ) from exc
-    return parsed.strftime("%Y-%m-%d")
+    return parsed.isoformat()
 
 
 def validate_month(value: str) -> str:
     """YYYY-MM 형식의 실제 연월인지 확인한다."""
     try:
-        parsed = datetime.strptime(value, "%Y-%m")
+        if re.fullmatch(r"\d{4}-\d{2}", value) is None:
+            raise ValueError("zero-padded year-month required")
+        date.fromisoformat(f"{value}-01")
     except ValueError as exc:
         raise BudgetAppError(
             "월 형식이 올바르지 않습니다.", "YYYY-MM 형식으로 입력하세요. 예: 2024-01"
         ) from exc
-    return parsed.strftime("%Y-%m")
+    return value
 
 
 def validate_amount(value: int) -> int:
@@ -142,4 +147,3 @@ class MonthlySummary:
     @property
     def is_over_budget(self) -> bool:
         return self.budget is not None and self.expense > self.budget
-
