@@ -43,6 +43,8 @@ python -m budget_app --data-dir ./demo_data summary --month 2026-09 --top 3
 
 예시의 9월 수입은 **3,000,000원**, 지출은 **810,000원**, 잔액은 **2,190,000원**입니다. 지출이 예산을 10,000원 넘었다는 경고도 확인할 수 있습니다.
 
+명령과 결과를 한 번에 보려면 [CLI 실행 로그](#cli-실행-로그)를 참고하세요.
+
 <details>
 <summary>전체 시연 펼치기 · 검색부터 CSV 가져오기까지 한 줄씩 실행</summary>
 
@@ -154,3 +156,57 @@ python -m unittest discover -v
 ```
 
 [저장 방식 선택과 10만 건 성능 분석](docs/DESIGN_AND_PERFORMANCE.md) · [측정 원본](docs/evidence/profile-100k.json) · [벤치마크 스크립트](scripts/benchmark_100k.py)
+
+## CLI 실행 로그
+
+빈 가계부에서 커피값 4,500원을 등록하고 5,500원으로 정정한 실제 터미널 기록입니다. CSV로 옮긴 뒤 원본에서만 삭제해 두 가계부의 마지막 목록을 비교했습니다. `$`는 셸 프롬프트이며, 임시 경로와 거래 ID는 실행할 때마다 달라집니다.
+
+```console
+$ demo=$(mktemp -d)
+$ python -m budget_app --data-dir "$demo" category add --name cafe
+[저장 완료] category=cafe
+$ python -m budget_app --data-dir "$demo" budget set --month 2026-09 --amount 5000
+[저장 완료] 2026-09 예산 5,000원
+$ python -m budget_app --data-dir "$demo" add
+날짜(YYYY-MM-DD): 2026-09-12
+타입(income/expense): expense
+카테고리: cafe
+금액(양수 정수): 4500
+메모(선택): 학교 앞 커피
+태그(쉼표로 구분, 없으면 엔터): campus
+[저장 완료] id=TX-6801E4721810
+$ python -m budget_app --data-dir "$demo" list --limit 1
+ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
+----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
+TX-6801E4721810 | 2026-09-12 | expense | cafe             | 4,500           | 학교 앞 커피                  | campus
+$ tx=$(python -m budget_app --data-dir "$demo" list --limit 1 | awk 'END {print $1}')
+$ python -m budget_app --data-dir "$demo" update --id "$tx" --amount 5500
+[수정 완료] id=TX-6801E4721810
+$ python -m budget_app --data-dir "$demo" search --category cafe --q 커피 --tag campus
+ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
+----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
+TX-6801E4721810 | 2026-09-12 | expense | cafe             | 5,500           | 학교 앞 커피                  | campus
+$ python -m budget_app --data-dir "$demo" summary --month 2026-09 --top 1
+총 수입: 0원
+총 지출: 5,500원
+잔액: -5,500원
+예산: 5,000원 (사용률 110.0%)
+[경고] 예산을 500원 초과했습니다.
+
+지출 TOP 1
+1) cafe 5,500원
+$ python -m budget_app --data-dir "$demo" export --month 2026-09 --out "$demo/sep.csv"
+[완료] /tmp/tmp.heEqkIQaJm/sep.csv (1 records)
+$ python -m budget_app --data-dir "$demo/copy" category add --name cafe
+[저장 완료] category=cafe
+$ python -m budget_app --data-dir "$demo/copy" import --from "$demo/sep.csv"
+[완료] imported=1, skipped=0
+$ python -m budget_app --data-dir "$demo" delete --id "$tx"
+[삭제 완료] id=TX-6801E4721810
+$ python -m budget_app --data-dir "$demo" list --limit 1
+데이터 없음
+$ python -m budget_app --data-dir "$demo/copy" list --limit 1
+ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
+----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
+TX-1FDA046AF4A9 | 2026-09-12 | expense | cafe             | 5,500           | 학교 앞 커피                  | campus
+```
