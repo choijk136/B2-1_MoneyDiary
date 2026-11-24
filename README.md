@@ -1,212 +1,84 @@
 # 나만의 용돈 기입장
 
-수입과 지출을 기록하고, 이번 달에 얼마가 남았는지와 어디에 많이 썼는지를 터미널에서 확인하는 Python 가계부입니다. 거래 내역, 카테고리, 월 예산은 파일에 저장되어 프로그램을 다시 실행해도 그대로 남습니다.
+수입과 지출을 기록하고, 한 달 동안 얼마를 썼고 얼마가 남았는지 확인하는 Python 콘솔 가계부입니다. 지출이 큰 카테고리를 찾아보고 월 예산을 넘으면 초과 금액도 확인할 수 있습니다.
 
-## 주요 기능
+<a name="cli-실행-로그"></a>
 
-| 작업 | 명령 | 할 수 있는 일 |
-| --- | --- | --- |
-| 거래 기록·조회 | `add`, `list` | 안내에 따라 거래를 입력하면 고유 ID가 발급됩니다. 목록은 최근 **등록한 순서**로 표시하며 `--limit`으로 건수를 정합니다. |
-| 조건 검색 | `search` | 기간, 카테고리, 수입·지출 유형, 메모 키워드, 태그를 조합해 원하는 내역만 찾습니다. |
-| 월별 결산 | `summary`, `budget set/get` | 월별 수입·지출·잔액과 지출 상위 카테고리를 확인합니다. 예산을 설정하면 사용률과 초과 금액도 표시합니다. |
-| 거래 정정 | `update`, `delete` | `--id`로 대상을 고릅니다. 수정은 바꿀 항목만 옵션으로 지정하며, 없는 ID는 오류로 안내합니다. |
-| 카테고리 관리 | `category add/list/remove` | 분류를 추가·조회·삭제합니다. 거래에서 사용 중인 카테고리는 삭제할 수 없습니다. |
-| 파일 교환 | `export`, `import` | 월이나 기간을 지정해 CSV로 내보내거나, 기존 CSV의 거래를 가져옵니다. |
+[한 줄씩 따라 하는 시연](docs/DEMO.md) · [실제 터미널 실행 기록](docs/DEMO.md#cli-실행-로그)
 
-<a name="평가-시연-위에서부터-한-줄씩-실행"></a>
+## 빠른 시작
 
-## 로컬 실행
-
-**Python 3.10 이상**이면 됩니다. 외부 패키지 설치 없이 `README.md`가 있는 폴더에서 실행합니다. 환경에 따라 `python` 대신 `python3`를 사용하세요.
-
-```bash
-python -m budget_app --help
-```
-
-내 거래를 기록하려면 `python -m budget_app add`를 실행합니다. 기본 저장 위치는 `./data`입니다. 처음에는 기본 카테고리만 있고 거래가 없어, 목록에 ‘데이터 없음’이 나오는 것이 정상입니다. 다른 저장 위치는 아래처럼 **명령 앞에** `--data-dir`로 지정합니다.
-
-### 예시 거래로 시작하기
-
-첫 줄은 2026년 9월 거래 6건과 예산 800,000원을 준비합니다. 다시 실행하면 시연 폴더(`demo_data`, `demo_imported`)의 가계부 파일을 초기화하고 `demo_export.csv`를 지웁니다. 기본 `./data`에는 영향을 주지 않습니다.
+Python **3.10 이상**이면 외부 패키지가 필요 없습니다. 저장소 루트에서 실행하세요. `python` 명령이 없다면 `python3`를 사용합니다. 첫 줄은 시연용 가계부(`demo_data`, `demo_imported`)를 초기화하고 이전 `demo_export.csv`를 지웁니다. 기본 가계부 `./data`는 바꾸지 않습니다.
 
 ```bash
 python -m scripts.prepare_demo
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data list --limit 6
-```
-
-```bash
 python -m budget_app --data-dir ./demo_data summary --month 2026-09 --top 3
 ```
 
-예시의 9월 수입은 **3,000,000원**, 지출은 **810,000원**, 잔액은 **2,190,000원**입니다. 지출이 예산을 10,000원 넘었다는 경고도 확인할 수 있습니다.
+예시 거래 6건의 9월 결산은 수입 **3,000,000원**, 지출 **810,000원**, 잔액 **2,190,000원**입니다. 예산은 800,000원이므로 10,000원 초과 경고가 표시됩니다.
 
-명령과 결과를 한 번에 보려면 [CLI 실행 로그](#cli-실행-로그)를 참고하세요.
+내 거래는 `python -m budget_app add`로 기록합니다. 새 가계부에는 기본 카테고리만 있고 거래가 없어, 처음 `list`를 실행하면 ‘데이터 없음’이 나옵니다. 명령과 옵션은 `python -m budget_app --help` 또는 각 명령의 `--help`로 확인하세요.
+
+## 주요 기능
+
+| 작업 | 명령 | 동작 |
+| --- | --- | --- |
+| 거래 기록·정정 | `add` · `update` · `delete` | 대화형으로 입력하면 거래 ID가 발급됩니다. 수정·삭제는 `--id`로 대상을 지정하며, 수정할 필드만 옵션으로 전달합니다. 없는 ID는 오류로 안내합니다. |
+| 조회·검색 | `list` · `search` | 최근 **등록 순서**로 표시합니다. 목록 건수는 `--limit`으로 정하고, 검색은 기간·카테고리·유형·메모·태그를 조합합니다. |
+| 월별 결산·예산 | `summary` · `budget set/get` | 수입·지출·잔액과 지출 상위 카테고리를 계산합니다. 예산이 있으면 사용률과 초과 금액도 표시합니다. |
+| 카테고리 관리 | `category add/list/remove` | 분류를 추가·조회·삭제합니다. 거래에서 사용 중인 카테고리는 삭제할 수 없습니다. |
+| CSV 교환 | `export` · `import` | 월 또는 기간을 골라 내보내고, 다른 가계부로 가져온 건수와 건너뛴 건수를 확인합니다. |
+
+<a name="평가-시연-위에서부터-한-줄씩-실행"></a>
 
 <details>
-<summary>전체 시연 펼치기 · 검색부터 CSV 가져오기까지 한 줄씩 실행</summary>
+<summary>핵심 명령 8개 직접 실행하기 (macOS·Linux)</summary>
 
-위에서 예시 데이터를 준비한 뒤 아래 명령을 순서대로 한 번씩 실행합니다.
-
-**1. 학교에서 쓴 점심값 찾기** — 기간·분류·유형·메모·태그에 모두 맞는 `TX-DEMO-003` 한 건이 나옵니다.
+첫 줄부터 순서대로 실행하면 됩니다. `printf`는 대화형 `add`에 여섯 개의 답을 차례로 건넵니다. 수정·삭제에는 고정된 예시 ID를 사용하므로 출력된 ID를 복사할 필요가 없습니다.
 
 ```bash
-python -m budget_app --data-dir ./demo_data search --from 2026-09-01 --to 2026-09-30 --category food --type expense --q 점심 --tag school
-```
-
-**2. 예산 변경** — 9월 예산을 900,000원으로 올리면 같은 지출의 사용률은 90.0%가 되고 초과 경고가 사라집니다.
-
-```bash
-python -m budget_app --data-dir ./demo_data budget set --month 2026-09 --amount 900000
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data budget get --month 2026-09
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data summary --month 2026-09 --top 3
-```
-
-**3. 카테고리 관리** — 아직 거래가 없는 `books`를 추가하고 목록에서 확인한 뒤 삭제합니다.
-
-```bash
-python -m budget_app --data-dir ./demo_data category add --name books
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data category list
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data category remove --name books
-```
-
-**4. 거래 추가** — `add`는 날짜 → 유형 → 카테고리 → 금액 → 메모 → 태그 순서로 묻습니다. 아래 한 줄은 macOS·Linux 터미널에서 여섯 답을 전달해 커피값 5,500원을 등록합니다. 직접 입력할 때는 `python -m budget_app --data-dir ./demo_data add`만 실행하세요. 두 방식 중 하나만 사용합니다.
-
-```bash
+python -m scripts.prepare_demo
 printf '%s\n' 2026-09-12 expense food 5500 '커피' 'drink,cafe' | python -m budget_app --data-dir ./demo_data add
-```
-
-**5. 거래 수정·삭제** — 예시 거래의 고정 ID를 사용합니다. 목록에서 영화 지출이 75,000원으로 바뀌고 장보기 내역이 사라지는지 확인합니다.
-
-```bash
+python -m budget_app --data-dir ./demo_data list --limit 3
+python -m budget_app --data-dir ./demo_data search --category food --q 점심 --tag school
 python -m budget_app --data-dir ./demo_data update --id TX-DEMO-005 --amount 75000 --memo "영화 할인 적용"
-```
-
-```bash
 python -m budget_app --data-dir ./demo_data delete --id TX-DEMO-006
-```
-
-```bash
-python -m budget_app --data-dir ./demo_data list --limit 6
-```
-
-**6. CSV 내보내기·가져오기** — 9월 거래를 CSV로 만들고 비어 있는 별도 가계부로 옮깁니다. 내보낸 6건과 가져온 6건이 일치해야 합니다.
-
-```bash
+python -m budget_app --data-dir ./demo_data summary --month 2026-09 --top 3
 python -m budget_app --data-dir ./demo_data export --out ./demo_export.csv --month 2026-09
-```
-
-```bash
 python -m budget_app --data-dir ./demo_imported import --from ./demo_export.csv
 ```
 
-```bash
-python -m budget_app --data-dir ./demo_imported list --limit 6
-```
+이 순서대로 실행한 뒤의 9월 지출은 765,500원이고, 마지막 가져오기 결과는 `imported=6, skipped=0`입니다.
 
 </details>
 
-## 저장 파일과 CSV 형식
+## 저장 형식
 
-내부 저장 형식은 UTF-8 **JSONL**입니다. 한 줄이 하나의 JSON 객체여서 거래를 한 건씩 읽을 수 있고, 태그 여러 개를 배열로 저장할 수 있습니다.
+**내부 저장은 UTF-8 JSONL**입니다. 한 줄이 독립된 레코드라 거래 전체를 메모리에 올리지 않고 읽을 수 있고, 태그를 배열로 보존합니다. 기본 경로는 `./data`이며, 다른 가계부를 쓸 때는 `--data-dir`을 명령 앞에 둡니다.
 
-| 기본 경로 | 저장 내용 |
+| 파일 | 저장 내용 |
 | --- | --- |
-| `data/transactions.jsonl` | 거래 ID, 유형, 날짜, 금액, 카테고리, 메모, 태그 |
-| `data/categories.jsonl` | 등록된 카테고리 이름 |
-| `data/budgets.jsonl` | 월(`YYYY-MM`)과 예산 금액 |
+| `data/transactions.jsonl` | `id`, `type`, `date`, `amount`, `category`, `memo`, `tags` |
+| `data/categories.jsonl` | 등록된 카테고리 이름(`name`) |
+| `data/budgets.jsonl` | 예산을 적용할 월(`month`)과 금액(`amount`) |
 
-가져오기·내보내기에는 UTF-8 **CSV**를 사용합니다. 헤더에는 아래 여섯 열이 모두 필요합니다. 날짜는 `YYYY-MM-DD`, 유형은 `income` 또는 `expense`, 카테고리는 등록된 이름, 금액은 양의 정수입니다. 메모와 태그의 **값**은 비워도 됩니다. 여러 태그는 예시처럼 한 셀에 넣습니다.
+**외부 교환은 UTF-8 CSV**입니다. 아래 여섯 열의 헤더가 필요합니다. 날짜는 `YYYY-MM-DD`, 유형은 `income` 또는 `expense`, 카테고리는 등록된 이름, 금액은 양의 정수입니다. 메모와 태그 값은 비워도 되며 여러 태그는 한 셀에 넣습니다.
 
 ```csv
 date,type,category,amount,memo,tags
 2026-09-05,expense,food,15000,학교 점심,"meal,school"
 ```
 
-`export`에는 `--month` 또는 기간 조건(`--from`, `--to`)이 필요합니다. 기본 `import`는 값이 잘못된 행의 번호와 이유를 알리고 정상 행은 저장합니다. 한 행이라도 잘못됐을 때 전체를 취소하려면 `--atomic`을 붙입니다.
+기본 `import`는 값이 잘못된 행의 번호·원인을 알려 주고 정상 행은 저장합니다. `--atomic`을 붙이면 한 행이라도 잘못됐을 때 신규 거래를 한 건도 반영하지 않습니다.
 
-## 사용 기술과 프로젝트 구조
+## 구현 구조
 
-| 모듈 | 역할 |
-| --- | --- |
-| [cli.py](budget_app/cli.py) · [formatters.py](budget_app/formatters.py) | `argparse`로 명령과 옵션을 받고 결과를 표로 출력합니다. 각 명령은 `--help`를 지원합니다. |
-| [models.py](budget_app/models.py) | `Transaction` 데이터클래스와 타입 힌트로 거래 구조를 정의하고 날짜·유형·금액을 검증합니다. |
-| [services.py](budget_app/services.py) | 거래 수정, 조건 검색, 월별 집계, 예산 및 카테고리 규칙을 처리합니다. |
-| [repositories.py](budget_app/repositories.py) | `yield`로 파일 전체를 메모리에 올리지 않고 거래를 읽습니다. 수정·삭제는 임시 파일을 완성한 뒤 원본과 교체합니다. |
-| [decorators.py](budget_app/decorators.py) | `@safe_command`가 오류 원인과 힌트를 표시하고 명령 상태·실행 시간을 `app.log`에 기록합니다. 정상 종료 코드는 0, 오류는 0이 아닌 값입니다. |
+- [모델](budget_app/models.py) · [서비스](budget_app/services.py): `Transaction` 데이터클래스가 거래 필드와 값의 범위를 정의하고, 서비스가 검색·집계·예산 규칙을 처리합니다. 타입 힌트로 반환값이 거래 한 건인지 거래를 순회하는 `Iterator[Transaction]`인지 구분합니다.
+- [저장소](budget_app/repositories.py): `yield`로 한 번에 한 건씩 읽습니다. 최신 목록은 파일 끝에서 필요한 만큼만 읽고, 수정·삭제는 임시 파일 기록을 마친 뒤 `os.replace()`로 원본을 교체합니다.
+- [CLI](budget_app/cli.py) · [데코레이터](budget_app/decorators.py): `argparse`가 명령·옵션을 읽고, `@safe_command`가 실행 상태와 시간을 `app.log`에 남깁니다. 정상 종료 코드는 0이고, 처리 중 오류는 원인·해결 힌트와 0이 아닌 종료 코드로 전달합니다.
 
-## 테스트와 참고 자료
+## 테스트와 설계 자료
 
-```bash
-python -m unittest discover -v
-```
+전체 테스트는 `python -m unittest discover -v`로 실행합니다. [CSV 가져오기 테스트](tests/test_csv_atomic.py)에서는 부분 반영과 전체 롤백을 같은 입력으로 비교합니다.
 
-[저장 방식 선택과 10만 건 성능 분석](docs/DESIGN_AND_PERFORMANCE.md) · [측정 원본](docs/evidence/profile-100k.json) · [벤치마크 스크립트](scripts/benchmark_100k.py)
-
-## CLI 실행 로그
-
-빈 가계부에서 커피값 4,500원을 등록하고 5,500원으로 정정한 실제 터미널 기록입니다. CSV로 옮긴 뒤 원본에서만 삭제해 두 가계부의 마지막 목록을 비교했습니다. `$`는 셸 프롬프트이며, 임시 경로와 거래 ID는 실행할 때마다 달라집니다.
-
-```console
-$ demo=$(mktemp -d)
-$ python -m budget_app --data-dir "$demo" category add --name cafe
-[저장 완료] category=cafe
-$ python -m budget_app --data-dir "$demo" budget set --month 2026-09 --amount 5000
-[저장 완료] 2026-09 예산 5,000원
-$ python -m budget_app --data-dir "$demo" add
-날짜(YYYY-MM-DD): 2026-09-12
-타입(income/expense): expense
-카테고리: cafe
-금액(양수 정수): 4500
-메모(선택): 학교 앞 커피
-태그(쉼표로 구분, 없으면 엔터): campus
-[저장 완료] id=TX-6801E4721810
-$ python -m budget_app --data-dir "$demo" list --limit 1
-ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
-----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
-TX-6801E4721810 | 2026-09-12 | expense | cafe             | 4,500           | 학교 앞 커피                  | campus
-$ tx=$(python -m budget_app --data-dir "$demo" list --limit 1 | awk 'END {print $1}')
-$ python -m budget_app --data-dir "$demo" update --id "$tx" --amount 5500
-[수정 완료] id=TX-6801E4721810
-$ python -m budget_app --data-dir "$demo" search --category cafe --q 커피 --tag campus
-ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
-----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
-TX-6801E4721810 | 2026-09-12 | expense | cafe             | 5,500           | 학교 앞 커피                  | campus
-$ python -m budget_app --data-dir "$demo" summary --month 2026-09 --top 1
-총 수입: 0원
-총 지출: 5,500원
-잔액: -5,500원
-예산: 5,000원 (사용률 110.0%)
-[경고] 예산을 500원 초과했습니다.
-
-지출 TOP 1
-1) cafe 5,500원
-$ python -m budget_app --data-dir "$demo" export --month 2026-09 --out "$demo/sep.csv"
-[완료] /tmp/tmp.heEqkIQaJm/sep.csv (1 records)
-$ python -m budget_app --data-dir "$demo/copy" category add --name cafe
-[저장 완료] category=cafe
-$ python -m budget_app --data-dir "$demo/copy" import --from "$demo/sep.csv"
-[완료] imported=1, skipped=0
-$ python -m budget_app --data-dir "$demo" delete --id "$tx"
-[삭제 완료] id=TX-6801E4721810
-$ python -m budget_app --data-dir "$demo" list --limit 1
-데이터 없음
-$ python -m budget_app --data-dir "$demo/copy" list --limit 1
-ID              | 날짜         | 타입      | 카테고리             | 금액              | 메모                       | 태그
-----------------+------------+---------+------------------+-----------------+--------------------------+-------------------------
-TX-1FDA046AF4A9 | 2026-09-12 | expense | cafe             | 5,500           | 학교 앞 커피                  | campus
-```
+[저장 형식 선택과 10만 건 병목·개선안](docs/DESIGN_AND_PERFORMANCE.md) · [측정 원본](docs/evidence/profile-100k.json) · [재현 스크립트](scripts/benchmark_100k.py)
