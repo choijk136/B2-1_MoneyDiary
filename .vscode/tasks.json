@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "용돈 기입장: 항목 1 시연",
+      "type": "process",
+      "command": "python3",
+      "windows": { "command": "python" },
+      "args": ["-m", "scripts.demo_item1"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    }
+  ]
+}

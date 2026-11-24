@@ -6,6 +6,8 @@
 
 [한 줄씩 따라 하는 시연](docs/DEMO.md) · [실제 터미널 실행 기록](docs/DEMO.md#cli-실행-로그)
 
+**평가 현장 시연:** VS Code 터미널에서 `python3 -m scripts.demo_item1`을 실행하고 Enter를 누르면 항목 1의 일곱 질문을 차례로 확인할 수 있습니다.
+
 ## 빠른 시작
 
 Python **3.10 이상**이면 외부 패키지가 필요 없습니다. 저장소 루트에서 실행하세요. `python` 명령이 없다면 `python3`를 사용합니다. 첫 줄은 시연용 가계부(`demo_data`, `demo_imported`)를 초기화하고 이전 `demo_export.csv`를 지웁니다. 기본 가계부 `./data`는 바꾸지 않습니다.
