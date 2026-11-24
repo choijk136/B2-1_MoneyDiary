@@ -6,10 +6,10 @@ import csv
 import uuid
 from calendar import monthrange
 from collections import defaultdict
+from collections.abc import Callable, Generator, Iterator
 from dataclasses import replace
 from itertools import islice
 from pathlib import Path
-from typing import Iterator
 
 from .errors import BudgetAppError
 from .models import (
@@ -33,19 +33,21 @@ class BudgetService:
     def __init__(self, storage: Storage) -> None:
         self.storage = storage
 
-    def _require_category(self, category: str) -> str:
+    def _require_category(self, category: str, known: set[str] | None = None) -> str:
         category = normalize_category(category)
-        if not self.storage.categories.contains(category):
+        exists = category in known if known is not None else self.storage.categories.contains(category)
+        if not exists:
             raise BudgetAppError(
                 f"등록되지 않은 카테고리입니다: {category}",
                 "`category list`로 확인하거나 `category add`로 먼저 등록하세요.",
             )
         return category
 
-    def _new_id(self) -> str:
+    @staticmethod
+    def _new_id(is_used: Callable[[str], bool]) -> str:
         while True:
             transaction_id = f"TX-{uuid.uuid4().hex[:12].upper()}"
-            if not self.storage.transactions.contains_id(transaction_id):
+            if not is_used(transaction_id):
                 return transaction_id
 
     def add_transaction(
@@ -59,7 +61,7 @@ class BudgetService:
         tags: str = "",
     ) -> Transaction:
         transaction = Transaction(
-            id=self._new_id(),
+            id=self._new_id(self.storage.transactions.contains_id),
             type=validate_type(transaction_type),
             date=validate_date(date),
             amount=validate_amount(amount),
@@ -189,38 +191,73 @@ class BudgetService:
         if not self.storage.categories.remove(category):
             raise BudgetAppError(f"존재하지 않는 카테고리입니다: {category}", "`category list`로 확인하세요.")
 
-    def import_csv(self, source: Path) -> tuple[int, int, tuple[str, ...]]:
+    def import_csv(self, source: Path, *, atomic: bool = False) -> tuple[int, int, tuple[str, ...]]:
+        """기본은 행별 부분 반영, atomic=True는 transactions.jsonl 전체 성공 또는 무변경."""
         if not source.is_file():
             raise BudgetAppError(f"가져올 파일을 찾을 수 없습니다: {source}", "--from 경로를 확인하세요.")
-        imported = 0
-        skipped = 0
+        repository = self.storage.transactions
         errors: list[str] = []
-        with source.open("r", encoding="utf-8-sig", newline="") as file:
-            reader = csv.DictReader(file)
-            missing = [column for column in CSV_COLUMNS if column not in (reader.fieldnames or [])]
-            if missing:
-                raise BudgetAppError(
-                    f"CSV 헤더가 부족합니다: {', '.join(missing)}", f"필수 헤더: {', '.join(CSV_COLUMNS)}"
-                )
-            for row_number, row in enumerate(reader, start=2):
-                try:
-                    amount_text = (row.get("amount") or "").strip()
-                    transaction = self.add_transaction(
-                        date=(row.get("date") or "").strip(),
-                        transaction_type=(row.get("type") or "").strip(),
-                        category=(row.get("category") or "").strip(),
-                        amount=int(amount_text),
-                        memo=row.get("memo") or "",
-                        tags=row.get("tags") or "",
-                    )
-                    if not transaction.id:
-                        raise AssertionError("id generation failed")
+        rows = self._csv_transactions(source, errors, atomic=atomic)
+        try:
+            if atomic:
+                imported = repository.append_many_atomic(rows)
+            else:
+                imported = 0
+                for transaction in rows:
+                    repository.append(transaction)
                     imported += 1
-                except (BudgetAppError, ValueError) as exc:
-                    skipped += 1
-                    message = exc.message if isinstance(exc, BudgetAppError) else "금액이 정수가 아닙니다."
-                    errors.append(f"{row_number}행: {message}")
-        return imported, skipped, tuple(errors)
+        except BudgetAppError as exc:
+            if not atomic:
+                raise
+            raise BudgetAppError(f"CSV 전체 롤백: imported=0\n{exc.message}", exc.hint) from exc
+        finally:
+            rows.close()
+        return imported, len(errors), tuple(errors)
+
+    def _csv_transactions(
+        self, source: Path, errors: list[str], *, atomic: bool
+    ) -> Generator[Transaction, None, None]:
+        """같은 행 검증기를 두 모드가 공유한다. 행 번호는 원본 CSV의 마지막 물리 줄."""
+        with source.open(encoding="utf-8-sig", newline="") as file:
+            reader = csv.reader(file, strict=True)
+            try:
+                columns = next(reader, [])
+                missing = [name for name in CSV_COLUMNS if name not in columns]
+                if missing or len(columns) != len(set(columns)):
+                    reason = f"누락: {', '.join(missing)}" if missing else "열 이름 중복"
+                    raise BudgetAppError(f"CSV 헤더(1행) 오류: {reason}", f"필수 헤더: {', '.join(CSV_COLUMNS)}")
+
+                # One scan per batch; reserve new IDs as well (including uncommitted rows).
+                used_ids = {tx.id for tx in self.storage.transactions.iter_transactions()}
+                categories = set(self.storage.categories.list())
+                for fields in reader:
+                    if not fields:  # empty physical line, not a transaction
+                        continue
+                    try:
+                        if len(fields) != len(columns):
+                            raise BudgetAppError(f"열 수가 다릅니다: 예상 {len(columns)}, 실제 {len(fields)}")
+                        row = dict(zip(columns, fields))
+                        try:
+                            amount = int(row["amount"])
+                        except ValueError as exc:
+                            raise BudgetAppError("금액이 정수가 아닙니다.") from exc
+                        transaction = Transaction(
+                            id=self._new_id(used_ids.__contains__),
+                            type=row["type"].strip(), date=row["date"].strip(), amount=amount,
+                            category=self._require_category(row["category"], categories),
+                            memo=row["memo"].strip(), tags=tuple(parse_tags(row["tags"])),
+                        )
+                    except BudgetAppError as exc:
+                        errors.append(f"{reader.line_num}행: {exc.message}")
+                        continue
+                    used_ids.add(transaction.id)
+                    yield transaction
+            except csv.Error as exc:
+                raise BudgetAppError(
+                    f"{reader.line_num}행: CSV 구문 오류: {exc}", "따옴표와 열 구분을 확인하세요."
+                ) from exc
+            if atomic and errors:
+                raise BudgetAppError("\n".join(errors), "표시된 행을 고친 뒤 --atomic으로 다시 실행하세요.")
 
     def export_csv(
         self,

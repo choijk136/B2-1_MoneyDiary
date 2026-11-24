@@ -1,0 +1,328 @@
+{
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41"
+  },
+  "records": 100000,
+  "fixture_bytes": 16445890,
+  "fixture_sha256": "f76ec9dcc14464b9c2cfb81605eca02458bf127e359aba263f3dc104a8f9f354",
+  "seed_seconds_excluded": 0.9524679930000275,
+  "repeat": 3,
+  "source_sha256": {
+    "budget_app/models.py": "f18fc417bd75c441f2ce00b4344b1fac326f9eb96cbd9e88267ac8d7e0a79039",
+    "budget_app/repositories.py": "379af10805c2adc1a2e1a19c93396a36d4259b73e3ecf7bb4b1064f97741acf4",
+    "budget_app/services.py": "4e5bba5f56a6d1630bd3f6e52cf0c214b30c199563fd090e2f8a0e05fd83da5a",
+    "scripts/benchmark_100k.py": "bcab7002564e73c3763bd92eca8d771296c18d09937284fa8a9aa868f2e5edcf"
+  },
+  "measurements": {
+    "list_20": {
+      "seconds": [
+        0.0003687959999751911,
+        0.00021991599999182654,
+        0.00021864400002868933
+      ],
+      "median_s": 0.00021991599999182654,
+      "result": 20,
+      "peak_python_bytes": 24577
+    },
+    "search_food": {
+      "seconds": [
+        0.4999364710000691,
+        0.5070523960000628,
+        0.49937916600003973
+      ],
+      "median_s": 0.4999364710000691,
+      "result": 12500,
+      "peak_python_bytes": 149295
+    },
+    "summary_january": {
+      "seconds": [
+        0.4927479240000139,
+        0.4902062469999464,
+        0.48818784500008405
+      ],
+      "median_s": 0.4902062469999464,
+      "result": 8344
+    },
+    "get_missing": {
+      "seconds": [
+        0.48691667100001723,
+        0.49805354600005103,
+        0.49648463700009415
+      ],
+      "median_s": 0.49648463700009415,
+      "result": null
+    },
+    "update_oldest": {
+      "seconds": [
+        2.3931065479999916,
+        2.351252578999947,
+        2.426006101999974
+      ],
+      "median_s": 2.3931065479999916,
+      "result": "TX-000000000000"
+    },
+    "delete_oldest": {
+      "seconds": [
+        1.9362797350000847,
+        2.3177497880000146,
+        1.9270427960000234
+      ],
+      "median_s": 1.9362797350000847,
+      "result": true
+    },
+    "export_january": {
+      "seconds": [
+        0.5176212510000369,
+        0.5123515809999617,
+        0.5172645240000975
+      ],
+      "median_s": 0.5172645240000975,
+      "result": 8344
+    },
+    "import_atomic_1000": {
+      "seconds": [
+        0.5344694560000107,
+        0.532016279000004,
+        0.5318460870000763
+      ],
+      "median_s": 0.532016279000004,
+      "result": [
+        1000,
+        0,
+        []
+      ],
+      "peak_python_bytes": 10854381
+    }
+  },
+  "cProfile": {
+    "search_food": {
+      "total_calls": 4933056,
+      "profile_seconds": 1.6662663580000001,
+      "top_cumulative": [
+        {
+          "function": "benchmark_100k.py:106(<lambda>)",
+          "calls": 1,
+          "self_s": 3.5973e-05,
+          "cumulative_s": 1.6658604160000001
+        },
+        {
+          "function": "~:0(<built-in method builtins.sum>)",
+          "calls": 1,
+          "self_s": 0.001613932,
+          "cumulative_s": 1.6658244430000002
+        },
+        {
+          "function": "benchmark_100k.py:106(<genexpr>)",
+          "calls": 12501,
+          "self_s": 0.004197551,
+          "cumulative_s": 1.664210511
+        },
+        {
+          "function": "services.py:80(search_transactions)",
+          "calls": 12501,
+          "self_s": 0.024974002000000002,
+          "cumulative_s": 1.6600129600000002
+        },
+        {
+          "function": "repositories.py:128(iter_transactions)",
+          "calls": 100001,
+          "self_s": 0.08455642000000001,
+          "cumulative_s": 1.6349711770000002
+        },
+        {
+          "function": "models.py:107(from_dict)",
+          "calls": 100000,
+          "self_s": 0.227417224,
+          "cumulative_s": 1.0195514860000001
+        },
+        {
+          "function": "<string>:2(__init__)",
+          "calls": 100000,
+          "self_s": 0.11808929400000001,
+          "cumulative_s": 0.720496299
+        },
+        {
+          "function": "models.py:91(__post_init__)",
+          "calls": 100000,
+          "self_s": 0.127079986,
+          "cumulative_s": 0.602407005
+        },
+        {
+          "function": "repositories.py:29(_decode_json)",
+          "calls": 100000,
+          "self_s": 0.045288268,
+          "cumulative_s": 0.41848034
+        },
+        {
+          "function": "__init__.py:299(loads)",
+          "calls": 100000,
+          "self_s": 0.058048319,
+          "cumulative_s": 0.36607519200000005
+        },
+        {
+          "function": "decoder.py:333(decode)",
+          "calls": 100000,
+          "self_s": 0.09583714500000001,
+          "cumulative_s": 0.284624195
+        },
+        {
+          "function": "~:0(<built-in method builtins.any>)",
+          "calls": 200001,
+          "self_s": 0.086690022,
+          "cumulative_s": 0.21734908600000002
+        },
+        {
+          "function": "models.py:57(normalize_category)",
+          "calls": 100001,
+          "self_s": 0.047581112,
+          "cumulative_s": 0.13225271
+        },
+        {
+          "function": "models.py:15(validate_date)",
+          "calls": 100000,
+          "self_s": 0.052736157000000006,
+          "cumulative_s": 0.13223531200000002
+        },
+        {
+          "function": "decoder.py:344(raw_decode)",
+          "calls": 100000,
+          "self_s": 0.10958437800000001,
+          "cumulative_s": 0.10958437800000001
+        },
+        {
+          "function": "repositories.py:44(_iter_lines_reverse)",
+          "calls": 100001,
+          "self_s": 0.045699048000000006,
+          "cumulative_s": 0.103301904
+        },
+        {
+          "function": "models.py:98(<genexpr>)",
+          "calls": 300000,
+          "self_s": 0.06928426,
+          "cumulative_s": 0.10029985000000001
+        },
+        {
+          "function": "~:0(<method 'isoformat' of 'datetime.date' objects>)",
+          "calls": 200000,
+          "self_s": 0.067164705,
+          "cumulative_s": 0.067164705
+        }
+      ]
+    },
+    "update_oldest": {
+      "total_calls": 31712313,
+      "profile_seconds": 9.102429613000002,
+      "top_cumulative": [
+        {
+          "function": "benchmark_100k.py:110(<lambda>)",
+          "calls": 1,
+          "self_s": 5.047e-06,
+          "cumulative_s": 9.102403654
+        },
+        {
+          "function": "services.py:117(update_transaction)",
+          "calls": 1,
+          "self_s": 1.359e-05,
+          "cumulative_s": 9.102398607000001
+        },
+        {
+          "function": "repositories.py:152(update)",
+          "calls": 1,
+          "self_s": 7.832e-06,
+          "cumulative_s": 7.487928007000001
+        },
+        {
+          "function": "repositories.py:88(_atomic_write_jsonl)",
+          "calls": 1,
+          "self_s": 0.048768607000000005,
+          "cumulative_s": 7.4879193840000005
+        },
+        {
+          "function": "repositories.py:83(_write_record)",
+          "calls": 100000,
+          "self_s": 0.06301465,
+          "cumulative_s": 4.388835158
+        },
+        {
+          "function": "__init__.py:120(dump)",
+          "calls": 100000,
+          "self_s": 1.038990472,
+          "cumulative_s": 4.301444774
+        },
+        {
+          "function": "repositories.py:128(iter_transactions)",
+          "calls": 200002,
+          "self_s": 0.20037669800000002,
+          "cumulative_s": 3.3972818460000003
+        },
+        {
+          "function": "repositories.py:155(changed_records)",
+          "calls": 100001,
+          "self_s": 0.054622875,
+          "cumulative_s": 3.048853282
+        },
+        {
+          "function": "encoder.py:414(_iterencode)",
+          "calls": 3200000,
+          "self_s": 0.6052879870000001,
+          "cumulative_s": 2.304729563
+        },
+        {
+          "function": "models.py:107(from_dict)",
+          "calls": 200000,
+          "self_s": 0.47608514900000004,
+          "cumulative_s": 2.16629036
+        },
+        {
+          "function": "encoder.py:334(_iterencode_dict)",
+          "calls": 3200000,
+          "self_s": 0.866057947,
+          "cumulative_s": 1.649641444
+        },
+        {
+          "function": "~:0(<built-in method builtins.next>)",
+          "calls": 4,
+          "self_s": 6.35e-06,
+          "cumulative_s": 1.61542856
+        },
+        {
+          "function": "repositories.py:143(get)",
+          "calls": 1,
+          "self_s": 0.000280426,
+          "cumulative_s": 1.61443022
+        },
+        {
+          "function": "repositories.py:144(<genexpr>)",
+          "calls": 2,
+          "self_s": 0.021767765,
+          "cumulative_s": 1.614103085
+        },
+        {
+          "function": "<string>:2(__init__)",
+          "calls": 200001,
+          "self_s": 0.239659796,
+          "cumulative_s": 1.536049742
+        },
+        {
+          "function": "models.py:91(__post_init__)",
+          "calls": 200001,
+          "self_s": 0.274970674,
+          "cumulative_s": 1.2963899460000001
+        },
+        {
+          "function": "models.py:101(to_dict)",
+          "calls": 100000,
+          "self_s": 0.046452616,
+          "cumulative_s": 1.189329008
+        },
+        {
+          "function": "dataclasses.py:1308(asdict)",
+          "calls": 100000,
+          "self_s": 0.046754941,
+          "cumulative_s": 1.142876392
+        }
+      ]
+    }
+  }
+}

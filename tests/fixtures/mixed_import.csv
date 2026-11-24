@@ -1,0 +1,4 @@
+date,type,category,amount,memo,tags
+2026-09-12,expense,food,5500,학생식당 점심,school
+2026-09-13,expense,food,-2000,음수 금액,check
+2026-09-14,income,salary,30000,용돈,allowance

@@ -189,7 +189,7 @@ def command_delete(args: argparse.Namespace) -> int:
 
 @safe_command
 def command_import(args: argparse.Namespace) -> int:
-    imported, skipped, errors = _service(args).import_csv(Path(args.source))
+    imported, skipped, errors = _service(args).import_csv(Path(args.source), atomic=args.atomic)
     print(f"[완료] imported={imported}, skipped={skipped}")
     for error in errors:
         print(f"[건너뜀] {error}")
@@ -270,6 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     import_parser = commands.add_parser("import", help="CSV 거래 가져오기")
     import_parser.add_argument("--from", dest="source", required=True, help="입력 CSV 경로")
+    import_parser.add_argument(
+        "--atomic", action="store_true", help="전체 행이 유효한 경우에만 저장 (실패 시 전체 롤백)"
+    )
     import_parser.set_defaults(handler=command_import)
 
     export_parser = commands.add_parser("export", help="조건에 맞는 거래를 CSV로 내보내기")

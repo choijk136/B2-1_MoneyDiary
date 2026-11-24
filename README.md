@@ -2,7 +2,26 @@
 
 Python 3.10 이상과 표준 라이브러리만 사용하는 JSONL 기반 콘솔 가계부입니다. 거래 CRUD, 스트리밍 조회/검색, 월별 집계, 예산, 카테고리, CSV 가져오기·내보내기를 지원합니다.
 
-> 저장 포맷 비교·선정 근거와 100,000건 실측 프로파일링 결과는 [`docs/DESIGN_AND_PERFORMANCE.md`](docs/DESIGN_AND_PERFORMANCE.md)에 정리했습니다.
+## 평가 #15 · #16 제출 근거
+
+| 항목 | 이 버전에서 확인할 결과 | 근거 |
+| --- | --- | --- |
+| **#15 — 100k 병목 분석** | 실제 100,000건, 각 연산 3회 중앙값. 식비 검색 **0.500초**(거래 100,000건 변환), 가장 오래된 거래 한 건 수정 **2.393초**(200,000건 변환·100,000건 재작성). 보고서에 병목별 개선안과 검증 기준을 구분했습니다. | [측정 방법·수치·개선안](docs/DESIGN_AND_PERFORMANCE.md) · [개별 측정값과 cProfile 원본](docs/evidence/profile-100k.json) · [재현 스크립트](scripts/benchmark_100k.py) |
+| **#16 — CSV 전체 롤백 옵션** | 같은 [정상–오류–정상 CSV](tests/fixtures/mixed_import.csv)에서 기본 모드는 **2건 저장·1건 건너뜀**, `--atomic`은 **0건 저장·종료 코드 2**. 기존 거래 파일이 한 바이트도 바뀌지 않는지 검사합니다. | [CSV 검증·모드 선택](budget_app/services.py#L194) · [임시 파일과 단일 교체](budget_app/repositories.py#L65) · [성공·실패 테스트](tests/test_csv_atomic.py) |
+
+#15를 직접 측정하려면 다음 한 줄을 실행합니다. 임시 폴더에서 실행되므로 시연 데이터는 바뀌지 않습니다.
+
+```bash
+python -m scripts.benchmark_100k --records 100000 --repeat 3
+```
+
+#16을 시연하려면 다음 한 줄을 실행합니다. 테스트가 의도적인 오류를 확인하므로 정상 검증 결과는 `OK`입니다.
+
+```bash
+python -m unittest -v tests.test_csv_atomic
+```
+
+전체 검증은 `python -m unittest discover -v`입니다. [제출 근거 검사](tests/test_submission_evidence.py)는 긴 벤치마크를 다시 돌리지 않고도 README 링크의 대상 파일이 빠졌거나 측정 이후 코드가 달라졌는지 확인합니다.
 
 ## 평가 시연: 위에서부터 한 줄씩 실행
 
@@ -115,14 +134,14 @@ python -m budget_app --data-dir ./demo_data export --out ./demo_export.csv --mon
 ```
 
 ```bash
-python -m budget_app --data-dir ./demo_imported import --from ./demo_export.csv
+python -m budget_app --data-dir ./demo_imported import --from ./demo_export.csv --atomic
 ```
 
 ```bash
 python -m budget_app --data-dir ./demo_imported list --limit 10
 ```
 
-첫 명령의 내보내기 건수와 두 번째 명령의 `imported` 건수가 일치하고, 마지막 목록에 CSV로 옮긴 거래가 표시됩니다.
+첫 명령의 내보내기 건수와 두 번째 명령의 `imported` 건수가 일치하고, 마지막 목록에 CSV로 옮긴 거래가 표시됩니다. 이 단계는 모든 행이 유효할 때만 저장하는 `--atomic` 모드를 사용합니다.
 
 ### 9. 초기화
 
@@ -201,7 +220,20 @@ python -m budget_app export --out ./export.csv --month 2024-01
 python -m budget_app export --out ./export.csv --from 2024-01-01 --to 2024-01-31
 ```
 
-내보내기는 `--month` 또는 기간 조건(`--from`, `--to`)을 하나 이상 요구합니다. `--month`와 기간 조건은 동시에 사용할 수 없습니다. 가져오기에서 잘못된 행은 건너뛰고 행 번호와 원인을 출력하며, 정상 행은 저장합니다.
+내보내기는 `--month` 또는 기간 조건(`--from`, `--to`)을 하나 이상 요구합니다. `--month`와 기간 조건은 동시에 사용할 수 없습니다.
+
+**CSV 가져오기 정책**
+
+| 실행 모드 | 정상–오류–정상 예시에서의 실제 결과 |
+| --- | --- |
+| 기본 (옵션 없음) | 유효한 두 행은 저장합니다. `[완료] imported=2, skipped=1`과 `[건너뜀] 3행: 금액은 양수 정수여야 합니다.`를 출력합니다. |
+| `--atomic` (전체 성공 또는 전체 롤백) | 정상 행도 원본에 즉시 추가하지 않습니다. 한 행이라도 잘못되면 `[오류] CSV 전체 롤백: imported=0`과 행 번호·원인을 출력하고 **종료 코드 2**를 반환합니다. 모두 유효하면 원본과 신규 거래를 합친 임시 파일을 한 번만 교체합니다. |
+
+실제 CLI 확인: 고정 시연 거래 **6건**에 위 예시 CSV를 가져오자 원자 모드는 **6건 → 6건**이었고 전후 `transactions.jsonl`의 SHA-256이 동일했습니다(`f8eb47ae4ee8…`). 같은 초기 상태에서 기본 모드는 **6건 → 8건**이었습니다.
+
+CSV는 한 번만 읽습니다. UTF-8 BOM과 인용된 줄바꿈을 지원하고, 여러 줄 레코드의 오류 번호는 원본의 **마지막 물리 줄**입니다. 따옴표가 닫히지 않아 레코드 경계를 알 수 없는 경우에는 읽기를 중단합니다. 이때 기본 모드는 앞서 저장한 행을 유지하고, 원자 모드는 앞선 행까지 반영하지 않습니다.
+
+원자 모드는 원본과 **같은 디렉터리**에 임시 파일을 생성합니다. 기존 데이터를 복사한 뒤 검증된 행을 쓰고, CSV 끝까지 오류가 없을 때만 `flush → fsync → close → os.replace`로 공개합니다. 쓰기·교체 실패 시 CLI는 비정상 종료하고 원본 거래 파일은 그대로입니다. 적용 범위는 단일 작성자의 `transactions.jsonl`이며 명령 로그나 여러 프로세스 간 동시 쓰기까지 롤백하는 기능은 아닙니다.
 
 CSV는 UTF-8, 헤더 포함 형식이며 스키마는 다음과 같습니다.
 

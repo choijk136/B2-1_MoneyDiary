@@ -6,8 +6,10 @@ import json
 import os
 import tempfile
 from collections.abc import Callable, Generator, Iterable, Iterator
+from contextlib import contextmanager
+from itertools import chain
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 from .errors import BudgetAppError
 from .models import Transaction, normalize_category, validate_amount, validate_month
@@ -59,17 +61,16 @@ def _iter_lines_reverse(path: Path, block_size: int = 8192) -> Generator[str, No
             yield buffer.decode("utf-8")
 
 
-def _atomic_write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
-    """같은 디렉터리의 임시 파일을 fsync한 뒤 원자적으로 교체한다."""
+@contextmanager
+def _atomic_output(path: Path) -> Iterator[TextIO]:
+    """Commit only after the producer, flush, fsync and close have all succeeded."""
     temp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", newline="\n", dir=path.parent, delete=False
         ) as temp_file:
             temp_path = Path(temp_file.name)
-            for record in records:
-                json.dump(record, temp_file, ensure_ascii=False, separators=(",", ":"))
-                temp_file.write("\n")
+            yield temp_file
             temp_file.flush()
             os.fsync(temp_file.fileno())
         os.replace(temp_path, path)
@@ -77,6 +78,17 @@ def _atomic_write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
     finally:
         if temp_path is not None:
             temp_path.unlink(missing_ok=True)
+
+
+def _write_record(file: TextIO, record: dict[str, Any]) -> None:
+    json.dump(record, file, ensure_ascii=False, separators=(",", ":"))
+    file.write("\n")
+
+
+def _atomic_write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
+    with _atomic_output(path) as file:
+        for record in records:
+            _write_record(file, record)
 
 
 class TransactionRepository:
@@ -89,10 +101,29 @@ class TransactionRepository:
 
     def append(self, transaction: Transaction) -> None:
         with self.path.open("a", encoding="utf-8", newline="\n") as file:
-            json.dump(transaction.to_dict(), file, ensure_ascii=False, separators=(",", ":"))
-            file.write("\n")
+            _write_record(file, transaction.to_dict())
             file.flush()
             os.fsync(file.fileno())
+
+    def append_many_atomic(self, transactions: Iterator[Transaction]) -> int:
+        """CSV 검증/쓰기 실패 시 원본을 건드리지 않는다. 한 번에 한 writer를 전제한다."""
+        first = next(transactions, None)
+        if first is None:
+            return 0
+        count = 0
+        with _atomic_output(self.path) as staged:
+            # Keep the original records verbatim, including unknown fields and CRLF.
+            last_char = ""
+            with self.path.open(encoding="utf-8", newline="") as original:
+                while chunk := original.read(64 * 1024):
+                    staged.write(chunk)
+                    last_char = chunk[-1]
+            if last_char and last_char != "\n":
+                staged.write("\n")
+            for transaction in chain((first,), transactions):
+                _write_record(staged, transaction.to_dict())
+                count += 1
+        return count
 
     def iter_transactions(self, *, newest_first: bool = False) -> Iterator[Transaction]:
         """거래를 한 건씩 yield한다. 최신순은 파일을 뒤에서부터 읽는다."""
